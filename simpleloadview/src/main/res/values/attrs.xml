@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="SimpleLoadView">
+        <attr name="error_drawable" format="reference"/>
+        <attr name="error_text" format="string"/>
+        <attr name="reload_button" format="boolean"/><!-- 是否要重新加载按钮 -->
+        <attr name="reload_button_text" format="string"/>
+        <attr name="reload_button_background" format="reference"/><!-- 重新加载按钮的背景 -->
+        <attr name="loading_drawable" format="reference"/><!-- loading时的显示单张图片 -->
+        <attr name="loading_animation" format="reference"/><!-- loading动画 -->
+        <attr name="loading_text" format="string"/>
+    </declare-styleable>
+</resources>
