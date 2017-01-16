@@ -20,28 +20,32 @@ import android.widget.TextView;
  * 其中Tween动画只支持代码添加
  */
 public class SimpleLoadView extends RelativeLayout {
-    private Context mContext;
+    private static final int PIC = 0;//a simple picture as loading
+    private static final int TWEEN = 1;//tween animation
+    private static final int FRAME = 2;//frame animation
+    private static int LOADING_MODE = PIC;
 
     //加载中，加载失败，重新加载公用View
     private ImageView centerImage;
     private TextView textView;
-
     private Button button;
 
     ////////
     private int errorDrawableRes;//加载错误显示的图片
     private String errorText;//加载错误显示的文字
-    private boolean haveReloadButton;
-    private String reloadButtonText;
+    private boolean haveReloadButton;//是否有重新加载按钮
+    private String reloadButtonText;//重新加载按钮的文字
     private int reloadButtonBackgroundRes;//重新加载按钮的背景
     private int loadingDrawableRes;//loading图片
     private int loadingAnimation;//loading动画，如果设置了图片，则动画无效
-    private String loadingText;
+    private String loadingText;//加载时候的文字
 
-    private boolean haveAnimation;
-    private AnimationDrawable ad;
+    private AnimationDrawable ad;//帧动画
     private Animation mAnim;//Tween动画
-    private OnReloadListener mListener;
+    @AnimRes
+    private int tweenRes;//tween动画资源
+    private int tweenPic;//tween动画需要的图片
+    private OnReloadListener mListener;//重新加载监听
 
     /**
      * 显示错误的状态 和 显示重新加载 二者用其一就行了
@@ -49,18 +53,16 @@ public class SimpleLoadView extends RelativeLayout {
 
     public SimpleLoadView(Context context) {
         this(context, null);
-        mContext = context;
     }
 
     public SimpleLoadView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        mContext = context;
         if (attrs == null) {
             return;
         }
 
-        TypedArray t = mContext.obtainStyledAttributes(attrs, R.styleable.SimpleLoadView);
-        errorDrawableRes = t.getResourceId(R.styleable.SimpleLoadView_error_drawable, Integer.MIN_VALUE);
+        TypedArray t = getContext().obtainStyledAttributes(attrs, R.styleable.SimpleLoadView);
+        errorDrawableRes = t.getResourceId(R.styleable.SimpleLoadView_error_drawable, 0);
         errorText = t.getString(R.styleable.SimpleLoadView_error_text);
         if (errorText == null) {
             errorText = "加载失败";
@@ -71,15 +73,23 @@ public class SimpleLoadView extends RelativeLayout {
             if (reloadButtonText == null) {
                 reloadButtonText = "重新加载";
             }
-            reloadButtonBackgroundRes = t.getResourceId(R.styleable.SimpleLoadView_reload_button_background, Integer.MIN_VALUE);
+            reloadButtonBackgroundRes = t.getResourceId(R.styleable.SimpleLoadView_reload_button_background, 0);
         }
-        loadingDrawableRes = t.getResourceId(R.styleable.SimpleLoadView_loading_drawable, Integer.MIN_VALUE);
-        if (loadingDrawableRes == Integer.MIN_VALUE) {
-            loadingAnimation = t.getResourceId(R.styleable.SimpleLoadView_loading_animation, Integer.MIN_VALUE);
-            if (loadingAnimation != Integer.MIN_VALUE) {
-                haveAnimation = true;
-            }
+        loadingDrawableRes = t.getResourceId(R.styleable.SimpleLoadView_loading_drawable, 0);
+        if (loadingDrawableRes != 0)
+            LOADING_MODE = PIC;
+
+        loadingAnimation = t.getResourceId(R.styleable.SimpleLoadView_loading_animation, 0);
+        if (loadingAnimation != 0) {
+            LOADING_MODE = FRAME;
         }
+
+        tweenRes = t.getResourceId(R.styleable.SimpleLoadView_tween_anim, 0);
+        tweenPic = t.getResourceId(R.styleable.SimpleLoadView_tween_pic, 0);
+        if (tweenRes != 0 && tweenPic != 0) {
+            LOADING_MODE = TWEEN;
+        }
+
         loadingText = t.getString(R.styleable.SimpleLoadView_loading_text);
         if (loadingText == null) {
             loadingText = "加载中...";
@@ -89,8 +99,8 @@ public class SimpleLoadView extends RelativeLayout {
     }
 
     private void initView() {
-        centerImage = new ImageView(mContext);
-        textView = new TextView(mContext);
+        centerImage = new ImageView(getContext());
+        textView = new TextView(getContext());
         //+id
         centerImage.setId(R.id.simple_loadview_img);
         textView.setId(R.id.simple_loadview_tv);
@@ -107,12 +117,14 @@ public class SimpleLoadView extends RelativeLayout {
         //赋值
 
         if (haveReloadButton) {
-            button = new Button(mContext);
+            button = new Button(getContext());
             addView(button);
             params = (LayoutParams) button.getLayoutParams();
             params.addRule(BELOW, R.id.simple_loadview_tv);
             params.addRule(CENTER_HORIZONTAL);
             params.setMargins(0, dip2px(10), 0, 0);
+            if (reloadButtonBackgroundRes != 0)
+                button.setBackgroundDrawable(getResources().getDrawable(reloadButtonBackgroundRes));
             button.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -121,6 +133,20 @@ public class SimpleLoadView extends RelativeLayout {
             });
         }
 
+        //init loading animation
+        switch (LOADING_MODE) {
+            case PIC:
+                centerImage.setImageResource(loadingDrawableRes);
+                break;
+            case TWEEN:
+                mAnim = AnimationUtils.loadAnimation(getContext(), tweenRes);
+                centerImage.setImageResource(tweenPic);
+                break;
+            case FRAME:
+                centerImage.setImageResource(0);
+                centerImage.setBackgroundResource(loadingAnimation);
+                ad = (AnimationDrawable) centerImage.getBackground();
+        }
     }
 
     /**
@@ -132,53 +158,37 @@ public class SimpleLoadView extends RelativeLayout {
         }
 
         setVisibility(VISIBLE);
-        if (haveAnimation) {//停止 Frame 动画
-            ad.stop();
-        }
-        if (mAnim != null) {//停止 Tween动画
+        if (LOADING_MODE == TWEEN)
             centerImage.clearAnimation();
-        }
+        if (LOADING_MODE == FRAME)
+            ad.stop();
 
         centerImage.setBackgroundResource(0);
         centerImage.setImageResource(errorDrawableRes);
         textView.setText(errorText);
-
     }
 
-    /**
-     * 显示单张图片，或者Frame动画
-     */
     public void showLoading() {
         setVisibility(VISIBLE);
         if (haveReloadButton) {
             button.setVisibility(GONE);
         }
-        if (haveAnimation) {
-            centerImage.setImageResource(0);
-            centerImage.setBackgroundResource(loadingAnimation);
-            ad = (AnimationDrawable) centerImage.getBackground();
-            ad.start();
-        } else {
-            centerImage.setImageResource(loadingDrawableRes);
+
+        switch (LOADING_MODE) {
+            case PIC:
+                centerImage.setImageResource(loadingDrawableRes);
+                break;
+            case TWEEN:
+                centerImage.setImageResource(tweenPic);
+                centerImage.startAnimation(mAnim);
+                break;
+            case FRAME:
+                centerImage.setBackgroundResource(loadingAnimation);
+                ad.start();
         }
         textView.setText(loadingText);
     }
 
-    /**
-     * 显示 Tween 的loading动画
-     */
-    public void showLoading(@AnimRes int animRes, @DrawableRes int loadImageRes) {
-        setVisibility(VISIBLE);
-        if (haveReloadButton) {
-            button.setVisibility(GONE);
-        }
-        if (mAnim == null) {
-            mAnim = AnimationUtils.loadAnimation(mContext, animRes);
-        }
-        centerImage.setImageResource(loadImageRes);
-        centerImage.startAnimation(mAnim);
-        textView.setText(loadingText);
-    }
 
     /**
      * 重新加载
@@ -188,21 +198,27 @@ public class SimpleLoadView extends RelativeLayout {
             throw new IllegalArgumentException("you must call showError() method");
         }
         setVisibility(VISIBLE);
-        button.setVisibility(VISIBLE);
-        if (haveAnimation) {//停止 Frame 动画
-            ad.stop();
-        }
-        if (mAnim != null) {//停止 Tween动画
+        if (LOADING_MODE == TWEEN)
             centerImage.clearAnimation();
-        }
+        if (LOADING_MODE == FRAME)
+            ad.stop();
 
         centerImage.setBackgroundResource(0);
         centerImage.setImageResource(errorDrawableRes);
-        textView.setText(errorText);
+        button.setVisibility(VISIBLE);
         button.setText(reloadButtonText);
-        if (reloadButtonBackgroundRes != Integer.MIN_VALUE) {
-            button.setBackgroundResource(reloadButtonBackgroundRes);
-        }
+    }
+
+    /**
+     * 设置 Tween 动画
+     *
+     * @param animRes      动画资源
+     * @param loadImageRes 动画需要的图片
+     */
+    private void setTweenAnim(@AnimRes int animRes, @DrawableRes int loadImageRes) {
+        LOADING_MODE = TWEEN;
+        mAnim = AnimationUtils.loadAnimation(getContext(), animRes);
+        centerImage.setImageResource(loadImageRes);
     }
 
     public void setOnReloadListener(OnReloadListener l) {
@@ -211,7 +227,7 @@ public class SimpleLoadView extends RelativeLayout {
 
     //dp 转 px
     private int dip2px(float dipValue) {
-        final float scale = mContext.getResources().getDisplayMetrics().density;
+        final float scale = getContext().getResources().getDisplayMetrics().density;
         return (int) (dipValue * scale + 0.5f);
     }
 

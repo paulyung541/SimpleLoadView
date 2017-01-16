@@ -1,19 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical">
+
     <Button
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="点"
-        android:onClick="buttonClick"/>
+        android:onClick="buttonClick"
+        android:text="模拟断开网络"/>
+
     <com.ysy.simpleloadview.SimpleLoadView
         android:id="@+id/loadview"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:error_drawable="@mipmap/error"
-        app:reload_button="true"/>
+        app:reload_button="true"
+        app:tween_anim="@anim/loading"
+        app:tween_pic="@mipmap/sso_load_icon"/>
 </LinearLayout>

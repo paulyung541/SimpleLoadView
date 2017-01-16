@@ -9,5 +9,7 @@
         <attr name="loading_drawable" format="reference"/><!-- loading时的显示单张图片 -->
         <attr name="loading_animation" format="reference"/><!-- loading动画 -->
         <attr name="loading_text" format="string"/>
+        <attr name="tween_anim" format="reference"/><!-- tween动画资源 -->
+        <attr name="tween_pic" format="reference"/><!-- tween动画的图片 -->
     </declare-styleable>
 </resources>

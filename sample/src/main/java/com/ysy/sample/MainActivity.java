@@ -17,10 +17,10 @@ public class MainActivity extends AppCompatActivity {
         loadView.setOnReloadListener(new SimpleLoadView.OnReloadListener() {
             @Override
             public void onReload() {
-                loadView.showLoading(R.anim.loading, R.mipmap.sso_load_icon);
+                loadView.showLoading();
             }
         });
-        loadView.showLoading(R.anim.loading, R.mipmap.sso_load_icon);
+        loadView.showLoading();
     }
 
     public void buttonClick(View view) {
