@@ -9,6 +9,7 @@ import android.util.AttributeSet;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
@@ -128,7 +129,8 @@ public class SimpleLoadView extends RelativeLayout {
             button.setOnClickListener(new OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    mListener.onReload();
+                    if (mListener != null)
+                        mListener.onReload();
                 }
             });
         }
@@ -141,6 +143,7 @@ public class SimpleLoadView extends RelativeLayout {
             case TWEEN:
                 mAnim = AnimationUtils.loadAnimation(getContext(), tweenRes);
                 centerImage.setImageResource(tweenPic);
+                mAnim.setInterpolator(new LinearInterpolator());
                 break;
             case FRAME:
                 centerImage.setImageResource(0);
@@ -153,6 +156,7 @@ public class SimpleLoadView extends RelativeLayout {
      * 显示加载错误
      */
     public void showError() {
+        setVisibility(VISIBLE);
         if (haveReloadButton) {
             throw new IllegalArgumentException("you must call showReload() method");
         }
@@ -183,6 +187,7 @@ public class SimpleLoadView extends RelativeLayout {
                 centerImage.startAnimation(mAnim);
                 break;
             case FRAME:
+                centerImage.setImageResource(0);
                 centerImage.setBackgroundResource(loadingAnimation);
                 ad.start();
         }
@@ -207,6 +212,15 @@ public class SimpleLoadView extends RelativeLayout {
         centerImage.setImageResource(errorDrawableRes);
         button.setVisibility(VISIBLE);
         button.setText(reloadButtonText);
+        textView.setText(errorText);
+    }
+
+    public void stopAll() {
+        if (LOADING_MODE == TWEEN)
+            centerImage.clearAnimation();
+        if (LOADING_MODE == FRAME)
+            ad.stop();
+        setVisibility(GONE);
     }
 
     /**
